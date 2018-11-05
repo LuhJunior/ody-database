@@ -1,6 +1,6 @@
 //********************************* FileController.h *************************************
-#ifndef FILE_CONTROLLER
-#define FILE_CONTROLLER
+#ifndef FILE_CONTROLLER_H
+#define FILE_CONTROLLER_H
 
 #include "FileToMemController.hpp"
 #include <iostream>
@@ -20,10 +20,10 @@
 #define DOUBLE 'd'
 #define CHAR 'c'
 #define STRING 's'
-#define BIT_PROTETOR 'û'
+#define BIT_PROTETOR 'ï¿½'
 #define ENTRADA 'I'
 #define SAIDA 'O'
-#define ENTRADA_SAIDA 'Î'
+#define ENTRADA_SAIDA 'ï¿½'
 
 using namespace std;
 

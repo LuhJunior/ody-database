@@ -1,6 +1,6 @@
 //********************* FileToMemController.hpp *******************************
-#ifndef FILE_TO_MEMORY_CONTROLLER
-#define FILE_TO_MEMORY_CONTROLLER
+#ifndef FILE_TO_MEMORY_CONTROLLER_H
+#define FILE_TO_MEMORY_CONTROLLER_H
 
 #include "FileController.hpp"
 #include <iostream>
