@@ -1,6 +1,6 @@
 //****************************** Interpreter.h *************************************
-#ifndef Interpreter_h
-#define Interpreter_h
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
 
 #include "FileController.hpp"
 #include <cstdio>
@@ -8,103 +8,22 @@
 #include <string>
 #include <algorithm>
 
+typedef enum { IDENTIFIER, RESERVED, OPERATOR, LOGICAL, TYPE, CBOOL, CINT, CFLOAT, CCHAR, 
+    CSTRING, FINAL } Categoria;
 
-/*
-class Term{
-public:
-    Term(string term){
-        this->term = term;
-    }
-protected:
-    string term;
-};
-
-class Comand:Term{
-public:
-    bool isComand(){
-        for(string x : comands) if(term == x) return true;
-        return false;
-    }
-    static bool isComand(string term){
-        for(string x : comands) if(term == x) return true;
-        return false;
-    }
-private:
-    const vector<string> comands = {"SELECT", "INSERT", "DELETE", "UPDATE"};
-};
-
-class Identifier:Term{
-public:
-    bool isIdentifier(){
-        return !isComand(term) && !isConnecter(term);
-    }
-};
-
-class Connecter:Term{
-public:
-    bool isConnecter(){
-        for(string x : connectors) if(term == x) return true;
-        return false;
-    }
-    static bool isConnecter(string term){
-        for(string x : connectors) if(term == x) return true;
-        return false;
-    }
-private:
-    const vector<string> connectors = {"FROM", "INTO", "ON", "IN"};
-};
-
-class Expression{
-public:
-    Expression(vector<Term> terms){
-        this->terms = terms;
-    }
-    bool analisarEexecutar(){
-        if(terms[0].term == "SELECT"){
-            if(terms[1].isIdentifier() || terms[1].term == "*"){
-                string nomeColuna = terms[1].term;
-                if(terms[2].isConnecter()){
-                    if(terms[3].isIdentifier()){
-                        string nomeBanco = terms[3].term;
-                        if(terms[4].isIdentifier()){
-                            string nomeTabela = terms[4].term;
-                            if(terms.size() == 5){
-                                DataBase db(nomeBanco);
-                                string meta;
-                                vector<MemRegister> mr(db.getRegister({nomeTabela, nomeColuna}, meta));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if(terms[0].term == "INSERT"){
-
-        }
-        else if(terms[0].term == "UPDATE"){
-
-        }
-        else if(terms[0].term == "DELETE"){
-
-        }
-        return FileControl::Error("Expressao Invalido!", false);
-    }
-private:
-    vector<Term> terms;
-};
-*/
-
-vector<string> Reserved_Words = { "ADD", "ALTER", "COLUMN", "CREATE", "DATABASE", "DELETE", "FROM", "IN", 
-    "INSERT", "INTO", "ON", "SELECT", "SET", "TABLE", "UPDATE", "VALUES", "WHERE" };
-
-typedef enum { IDENTIFIER, OPERATOR, LOGICAL, CINT, CFLOAT, CCHAR, CSTRING, FINAL } Categoria;
-
-typedef enum { MAIS, MENOS, VEZES, DIVISAO, ATRIBUICAO, PONTO } Operator;
+typedef enum { MAIS, MENOS, VEZES, DIVISAO, ATRIBUICAO, PONTO, 
+    ABRE_PARENTESIS, FECHA_PARENTESIS, VIRGULA } Operator;
 
 typedef enum { NOT, IGUAL, MAIOR, MENOR, MAIOR_IGUAL, MENOR_IGUAL } Logical;
 
+typedef enum { ADD, ALTER, COLUMN, CREATE, DATABASE, DELETE, FROM, IN, 
+    INSERT, INTO, ON, SELECT, SET, TABLE, UPDATE, USE, VALUES, WHERE } Words;
+
 class Token{
 public:
+    Token(){
+        this->valor = nullptr;
+    }
     Token(Categoria cat, void *valor){
         this->cat = cat;
         this->valor = nullptr;
@@ -113,13 +32,17 @@ public:
                 this->valor = new string;
                 *cstring(this->valor) = *cstring(valor);
                 break;
+            case RESERVED:
+                this->valor = new char;
+                *cchar(this->valor) = *cchar(valor);
+                break;
             case CINT:
                 this->valor = new int;
-                *cint(this->valor) = *cint(valor);
+                *cint(this->valor) = stoi(*cstring(valor));
                 break;
             case CFLOAT:
                 this->valor = new float;
-                *cfloat(this->valor) = *cfloat(valor);
+                *cfloat(this->valor) = stof(*cstring(valor));
                 break;
             case CCHAR:
                 this->valor = new char;
@@ -140,18 +63,114 @@ public:
         }
     }
     ~Token(){
-        delete this->valor;
+        this->valor = nullptr;
+        //free(this->valor);
     }
+    Token& operator= (const Token& t){
+        this->cat = t.cat;
+        this->valor = t.valor;
+        return *this;
+    }
+    void free_token();
     void print();
+    bool constant();
+    char reserved();
+    char oper();
+    bool identifier();
+    char logical();
+    char type();
+    string get_string();
+    char get_char();
+    int get_int();
+    float get_float();
     bool is_final();
 private:
     Categoria cat;
     void *valor;
 };
 
+class Expression{
+public:
+    Expression(Type tipo, void *valor){
+        this->tipo = tipo;
+        this->valor = valor;
+    }
+    /*
+    Expression operator+ (Expression e) {
+        Type aType;
+        void *aValor = nullptr;
+        if(this->tipo == e.tipo) {
+            aType = this->tipo;
+            switch (this->tipo) {
+                case INT:
+                    aValor = new int;
+                    *cint(aValor) = this->get_int() + e.get_int();
+                case FLOAT:
+                    aValor = new float;
+                    *cfloat(aValor) = this->get_float() + e.get_float();
+                case CHAR:
+                    aValor = new char;
+                    *cchar(aValor) = this->get_char() + e.get_char();
+                case STRING:
+                    aValor = new string;
+                    *cstring(aValor) = this->get_string() + e.get_string();
+                case BOOL:
+                    aValor = new bool;
+                    *cbool(aValor) = this->get_bool() + e.get_bool();
+                default:
+                    Error("Tipo da Expressao invalido");
+                    break;
+            }
+        } else if (this->tipo == INT && e.tipo == CHAR || this->tipo == CHAR && e.tipo == INT) {
+            aType = INT;
+            aValor = new int;
+            if(this->tipo == INT) *cint(aValor) = this->get_int() + e.get_char();
+            else *cint(aValor) = this->get_char() + e.get_int();
+        } else if (this->tipo == INT && e.tipo == FLOAT || this->tipo == FLOAT && e.tipo == INT) {
+            aType = FLOAT;
+            aValor = new float;
+            if(this->tipo == FLOAT) *cfloat(aValor) = this->get_float() + e.get_int();
+            else *cint(aValor) = this->get_int() + e.get_float();
+        } else if (this->tipo == INT && e.tipo == BOOL || this->tipo == BOOL && e.tipo == INT) {
+
+        } else if (this->tipo == CHAR && e.tipo == FLOAT || this->tipo == FLOAT && e.tipo == CHAR) {
+
+        } else if (this->tipo == CHAR && e.tipo == BOOL || this->tipo == BOOL && e.tipo == CHAR) {
+
+        } else if (this->tipo == FLOAT && e.tipo == BOOL || this->tipo == BOOL && e.tipo == FLOAT) {
+
+        } 
+        return Expression(aType, aValor);
+    }
+
+    Expression& operator- (const Expression& e) {
+        
+    }
+    Expression& operator* (const Expression& e) {
+        
+    }
+    Expression& operator/ (const Expression& e) {
+        
+    }
+    
+    string get_string();
+    char get_char();
+    int get_int();
+    float get_float();
+    bool get_bool();
+    */
+private:
+    Type tipo;
+    void *valor;
+};
+
 int is_reserved(string);
 
 Token get_token();
+
+void get_first_token();
+
+void get_next_token();
 
 char get_next_char();
 
@@ -160,5 +179,25 @@ void unget_char(char);
 bool prepare_file(string);
 
 bool close_file();
+
+void Error(string);
+
+bool Expre();
+
+void Values();
+
+void Set();
+
+/*
+Expression Expre();
+
+Expression SimpleExpre();
+
+Expression Term();
+
+Expression Factor();
+*/
+
+void Execute();
 
 #endif // Interpreter

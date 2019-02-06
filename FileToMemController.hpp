@@ -2,7 +2,6 @@
 #ifndef FILE_TO_MEMORY_CONTROLLER_H
 #define FILE_TO_MEMORY_CONTROLLER_H
 
-#include "FileController.hpp"
 #include <iostream>
 #include <fstream>
 #include <cstring>

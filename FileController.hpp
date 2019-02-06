@@ -14,19 +14,17 @@
 #define cstring(x) (string *) x
 #define cfloat(x) (float *) x
 #define cdouble(x) (double *) x
+#define cbool(x) (bool *) x
 #define cvoid(x) (void *) x
-#define INT 'i'
-#define FLOAT 'f'
-#define DOUBLE 'd'
-#define CHAR 'c'
-#define STRING 's'
-#define BIT_PROTETOR '�'
+#define BIT_PROTETOR '7'
 #define ENTRADA 'I'
 #define SAIDA 'O'
-#define ENTRADA_SAIDA '�'
+#define ENTRADA_SAIDA 'D'
 
 using namespace std;
 
+
+typedef enum Types { BOOL = 'b', INT = 'i', FLOAT = 'f', DOUBLE = 'd', CHAR = 'c', STRING = 's'} Type;
 
 class Segment{
 public:

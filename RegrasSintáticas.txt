@@ -1,0 +1,44 @@
+CREATE DATABASE <Identificador>;
+
+CREATE TABLE <Identificador> [ (<TYPE> <Identificador> {, <TYPE> <Identificador> } ) ]
+
+ALTER TABLE <Identificador> ADD COLUNM (<TYPE> <Identificador>); 
+
+USE <Identificador>; 
+
+SELECT <Identificador> FROM <Identificador> [ WHERE <Expression> ]
+
+INSERT INTO <Identificador> VALUES(<CONS> {, <CONST>})
+
+UPDATE <Identificador> SET <Identificador> = <CONST> {, <Identificador> = <CONST>}
+    WHERE <Expression>
+
+DELETE FROM <Identificador> WHERE <Expression>
+
+Expression :=
+    <Identificador> [ == ] <CONST>
+
+
+
+
+-------------------- THE DREAM ------------------------------------------
+
+Expression := <Simple_Expre> [ <OperadorLogico> <Simple_Expre> ]
+
+Simple_Expre := [ + || - ] < Term> { + || - || or  <Term> }
+
+Term := <Factor> { * || / || and <Factor> }
+
+Factor := <Identificador> || <CONST> || ( <Factor> ) || not <Factor>
+
+Operations :
+
+    TYPE <Operation> TYPE
+
+    TYPE <Operation> TYPE
+    INT <Operation> CHAR
+    INT <Operation> FLOAT
+    INT <Operation> BOOL
+    CHAR <Operation> FLOAT
+    CHAR <Operation> BOOL
+    FLOAT <Operation> BOOL

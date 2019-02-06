@@ -1,7 +1,6 @@
 //********************* FileToMemController.cpp *******************************
 #include "FileToMemController.hpp"
 #include "FileController.hpp"
-
 bool Node::atribuir(fstream& f, Data d, char type){
     if(type == INT){
         info = new int;
