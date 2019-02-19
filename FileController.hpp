@@ -3,28 +3,17 @@
 #define FILE_CONTROLLER_H
 
 #include "FileToMemController.hpp"
+#include "Tools.hpp"
 #include <iostream>
 #include <fstream>
 #include <cstring>
 #include <vector>
-#define cout(x) cout<<x<<endl
-#define cerr(x) cerr<<x<<endl
-#define cint(x) (int *) x
-#define cchar(x) (char *) x
-#define cstring(x) (string *) x
-#define cfloat(x) (float *) x
-#define cdouble(x) (double *) x
-#define cbool(x) (bool *) x
-#define cvoid(x) (void *) x
 #define BIT_PROTETOR '7'
 #define ENTRADA 'I'
 #define SAIDA 'O'
 #define ENTRADA_SAIDA 'D'
 
 using namespace std;
-
-
-typedef enum Types { BOOL = 'b', INT = 'i', FLOAT = 'f', DOUBLE = 'd', CHAR = 'c', STRING = 's'} Type;
 
 class Segment{
 public:
@@ -203,8 +192,8 @@ public:
     int size();
     bool getFromFile(fstream&, Segment);
     bool setToFile(fstream&, Segment);
-    bool setNomeToFile(fstream&,class DataBase&, string);
-    bool setTipoToFile(fstream&,class DataBase&, string);
+    bool setNomeToFile(fstream&, class DataBase&, string);
+    bool setTipoToFile(fstream&, class DataBase&, string);
     bool setVarNameToFile(fstream&, string);
     bool getNomeFromFile(fstream&, string&);
     bool getTipoFromFile(fstream&, string&);
@@ -274,7 +263,7 @@ public:
     int size();
     bool getFromFile(fstream&, Segment);
     bool setToFile(fstream&, Segment);
-    vector<string> getTableMeta();
+    string getTableMeta(class DataBase&);
     bool operator== (const TableHeader& th) const{
         return (this->numeroColunas == th.numeroColunas && this->numeroRegistros == th.numeroRegistros
                 && this->tablePosition == th.tablePosition && this->metaTablePosition == th.metaTablePosition
@@ -373,15 +362,17 @@ public:
     }
     bool open();
     bool open(fstream&);
+    bool isOpen();
     static bool create(string);
     bool insertTable(string);
     bool insertColumn(string, string, char);
     bool insertRegister(MemRegister&);
-    bool updateRegister(string[4], string);
-    bool deleteRegister(string[3]);
+    bool updateRegister(vector<string>, string);
+    bool deleteRegister(vector<string> );
     bool freeSegment(fstream&, Segment);
-    vector<MemRegister> getRegister(string[3], string&);
+    vector<MemRegister> getRegister(vector<string> );
     Segment searchTable(string);
+    TableHeader getTableHeader(string);
     Segment searchTable(HeadTableHeader&, TableHeader&, TableMetaDado&, string);
     void close();
     bool operator== (const DataBase& DB) const{

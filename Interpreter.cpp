@@ -17,7 +17,7 @@ bool prepare_file(string s){
 }
 
 void Error(string e){
-    FileControl::Error(e);
+    cerr<<"Ocorreu um erro na linha "<< linha << "e coluna " << coluna <<" : "<<e<<endl;
     exit(0);
 }
 
@@ -26,21 +26,30 @@ int is_reserved(string s){
     return *it == s ? it - Reserved_Words.begin() : -1;
 }
 
+int is_type(string s){
+    if(s == "int") return INT;
+    else if (s == "float") return FLOAT;
+    else if (s == "char") return CHAR;
+    else if (s == "string") return STRING;
+    else return -1;
+}
+
 bool close_file(){
     Entrada.close();
     return true;
 }
 
 char get_next_char(){
+    coluna++;
     return Entrada.get();
 }
 
 void unget_char(char c){
+    coluna--;
     Entrada.unget();
 }
 
 void get_first_token(){
-    tn = get_token();
     tna = get_token();
 }
 
@@ -48,6 +57,7 @@ void get_next_token(){
     tn.free_token();
     tn = tna;
     if(!tna.is_final()) tna = get_token();
+    else cout("Fim arquivo");
 }
 
 bool Token::is_final(){
@@ -155,6 +165,10 @@ char Token::logical(){
     return -1;
 }
 
+bool Token::identifier(){
+    return this->cat == IDENTIFIER;
+}
+
 char Token::type(){
     if(this->cat == TYPE) return this->get_char();
     return -1;
@@ -189,6 +203,9 @@ bool Expre(){
             get_next_token();
             return tn.constant();
         }
+    } else if(tn.constant()){
+        identificadores.push_back(tn.get_string());
+        return true;
     }
     return false;
 }
@@ -234,8 +251,16 @@ void Set(){
     }
 }
 
-void Comand(){
-    get_first_token();
+void Where(){
+    if(tna.reserved() == WHERE){
+        get_next_token();
+        if(!Expre()) Error("Expressao invalida!");
+        identificadores.push_back(tn.get_string());
+    }
+}
+
+void Query(){
+    get_next_token();
     switch (tn.reserved())
     {
         case CREATE:
@@ -243,10 +268,17 @@ void Comand(){
             if(tn.reserved() == DATABASE){
                 get_next_token();
                 if(!tn.identifier()) Error("Esperava-se um identificador depois do DATABASE");
-                if(DataBase::create(tn.get_string())) cout("DataBase Criado com sucesso!");
+                identificadores.push_back(tn.get_string());
+                get_next_token();
+                if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+                if(DataBase::create(identificadores[0])) cout("DataBase Criado com sucesso!");
                 else Error("Houve um Error na criacao do Banco!");
             } else if(tn.reserved() == TABLE){
+                get_next_token();
+                tn.print();
+                cout(tn.identifier());
                 if(!tn.identifier()) Error("Esperava-se um identificador depois do TABLE");
+                identificadores.push_back(tn.get_string());
                 get_next_token();
                 if(tna.oper() == ABRE_PARENTESIS){
                     get_next_token();
@@ -265,13 +297,42 @@ void Comand(){
                         identificadores.push_back(tn.get_string());
                     }
                 }
-                // TOF ...
-            } else Error("Esperava-se um identificador depois do comando SELECT");
+                if(!database.isOpen()) Error("Nenhum banco selecionado");
+                if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+                if(database.insertTable(identificadores[0])) cout("Tabela Adicionada");
+            } else Error("Esperava-se um identificador depois do comando CREATE");
+            break;
         case ALTER:
             get_next_token();
             if(tn.reserved() != TABLE) Error("Esperava-se TABLE depois do comando ALTER");
             get_next_token();
+            if(!tn.identifier()) Error("Esperava-se um identificador depois de TABLE");
+            identificadores.push_back(tn.get_string());
+            get_next_token();
+            if(tn.reserved() != ADD) 
+            get_next_token();
+            if(tn.reserved() != COLUMN){
+                get_next_token();
+                if(tn.reserved() != ABRE_PARENTESIS) Error("Esperava-se um \"(\" depois do COLUMN");
+                get_next_token();
+                if(!tn.type()) Error("Esperava-se um tipo depois do \"(\"");
+                identificadores.push_back("" + tn.get_char());
+                get_next_token();
+                if(!tn.identifier()) Error("Esperava-se um Identificador depois do tipo");
+                identificadores.push_back(tn.get_string());
+                get_next_token();
+                if(tn.reserved() != FECHA_PARENTESIS) Error("Esperava-se um \")\" depois do identificador");
+                get_next_token();
+                if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
 
+                if (database.insertColumn(identificadores[0], identificadores[2], identificadores[1][0]))
+                    cout("Coluna Criada!");
+            //} else if() {
+
+            } else {
+                Error("");
+            }
+            break;
         case SELECT:
             get_next_token();
             if(!(tn.identifier())) Error("Esperava-se um identificador depois do comando SELECT");
@@ -281,12 +342,13 @@ void Comand(){
             get_next_token();
             if(!(tn.identifier())) Error("Esperava-se um identificador depois do comando FROM");
             identificadores.push_back(tn.get_string());
-            if(tna.reserved() == WHERE){
-                get_next_token();
-                if(!Expre()) Error("Expressao invalida!");
-                identificadores.push_back(tn.get_string());
+            Where();
+            get_next_token();
+            if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+            {
+                auto mrs = database.getRegister(identificadores);
+                for(auto mr : mrs) mr.print();
             }
-            // TOF ...
             break;
         case INSERT:
             get_next_token();
@@ -297,7 +359,13 @@ void Comand(){
             get_next_token();
             if(!(tn.reserved() == VALUES)) Error("Esperava-se VALUES depois do identificador");
             Values();
-            // TOF ...
+            get_next_token();
+            if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+            {
+                string meta = database.getTableHeader(identificadores[0]).getTableMeta(database);
+                auto mr = MemRegister(identificadores, meta);
+                database.insertRegister(mr);
+            }
             break;
         case UPDATE:
             get_next_token();
@@ -306,32 +374,56 @@ void Comand(){
             get_next_token();
             if(tn.reserved() != SET) Error("Esperava-se SET depois do identificador");
             Set();
-            // TOF ...
+            Where();
+            get_next_token();
+            if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+            if(identificadores.size() > 3){
+                vector<string>  param = { identificadores[0], "", "", identificadores[1] };
+                database.updateRegister(param, identificadores[2]);
+            } else {
+                vector<string>  param = { identificadores[0], identificadores[3], identificadores[4], identificadores[1] };
+                database.updateRegister(param, identificadores[2]);
+            }
+            break;
         case DELETE:
             get_next_token();
             if(tn.reserved() != FROM) Error("Esperava-se um identificador depois do DELETE");
             get_next_token();
             if(!tn.identifier()) Error("Esperava-se um identificador depois do FROM");
-            if(tna.reserved() == WHERE){
-                get_next_token();
-                if(!Expre()) Error("Expressao invalida!");
-                identificadores.push_back(tn.get_string());
+            identificadores.push_back(tn.get_string());
+            Where();
+            get_next_token();
+            if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+            {
+                vector<string> param = { identificadores[0], identificadores[1], identificadores[2] };
+                database.deleteRegister(param);
             }
-            // TOF ...
+            break;
         case USE:
             get_next_token();
             if(!tn.identifier()) Error("Esperava-se um identificador depois do USE");
-            database = DataBase(tn.get_string());
+            identificadores.push_back(tn.get_string());
+            get_next_token();
+            if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+            database = DataBase(identificadores[0]);
             if(!database.open()) Error("Error ao abrir o banco");
+            cout("Usando "<< identificadores[0]);
+            break;
         default:
             Error("Esperava-se um comando USE, SELECT, INSERT, UPDATE OU DELETE");
             break;
     }
+    identificadores.clear();
 }
 
 void Execute(){
     prepare_file("queries.txt");
-
+    get_first_token();
+    while(!tn.is_final()){
+        get_next_token();
+        tn.print();
+    }
+    //while(!tn.is_final()) Query();
 }
 
 Token get_token(){
@@ -343,7 +435,6 @@ Token get_token(){
         switch(estado){
             case 0:
                 c = get_next_char();
-
                 if(isalpha(c)){
                     estado = 1;
                     buffer += c;
@@ -379,12 +470,19 @@ Token get_token(){
                     estado = 12;
                     buffer += c;
                 } else if (c == ' '){
-                    coluna++;
-                } else if (c == '\n'){
+                    //coluna++;
+                } else if (c == '\n' || c == '\r'){
+                    coluna = 1;
                     linha++;
                 } else if (c == '\t'){
                     coluna+=3;
+                } else if(c == ';') {
+                    valor = PONTO_VIRGULA;
+                    return Token(OPERATOR, &valor);
+                } else if(c == EOF) {
+                    return Token(FINAL, nullptr);
                 } else {
+                    cout<<int(c)<<endl;
                     estado = -1;
                 }
                 break;
@@ -397,7 +495,11 @@ Token get_token(){
                 unget_char(c);
                 valor = is_reserved(buffer);
                 if(valor != -1) return Token(RESERVED, &valor);
-                return Token(IDENTIFIER, &buffer);
+                else {
+                    valor = is_type(buffer);
+                    if(valor != -1) return Token(TYPE, &valor);
+                    return Token(IDENTIFIER, &buffer);
+                }
             case 3:
                 c = get_next_char();
                 if(isdigit(c)) buffer += c;

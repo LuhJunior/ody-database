@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstring>
 #include <vector>
+#include "Tools.hpp"
 
 using namespace std;
 
@@ -50,16 +51,48 @@ private:
 class MemRegister{
 public:
     MemRegister(string s = ""): nome(s){}
+    MemRegister(vector<string> v, string meta){
+        for(int i=0; i<meta.size(); i++){
+            void *ax = nullptr;
+            switch (meta[i])
+            {
+                case INT:
+                    ax = new int;
+                    *cint(ax) = stoi(v[i], nullptr, 10);
+                    break;
+                case CHAR:
+                    ax = new char;
+                    *cchar(ax) = v[i][0];
+                    break;
+                case FLOAT:
+                    ax = new float;
+                    *cfloat(ax) = stof(v[i]);
+                    break;
+                case DOUBLE:
+                    ax = new double;
+                    *cdouble(ax) = stod(v[i]);
+                    break;
+                case STRING:
+                    ax = new string;
+                    *cstring(ax) = v[i];
+                    break;
+                default:
+                    break;
+            }
+            Node n = Node("", ax);
+            this->insert(n);
+        }
+    }
     ~MemRegister(){
         nome.clear();
         for(unsigned int i = 0; i < vars.size(); i++) vars[i].~Node();
     }
     bool free(string);
     bool insert(Node&);
-    void print(string);
+    void print();
     static void *stringToVoid(const string&, void *&, char);
 //private:
-    string nome;
+    string nome, meta;
     vector<Node> vars;
     friend class Register;
     friend class DataBase;

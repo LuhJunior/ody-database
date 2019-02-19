@@ -12,7 +12,7 @@ typedef enum { IDENTIFIER, RESERVED, OPERATOR, LOGICAL, TYPE, CBOOL, CINT, CFLOA
     CSTRING, FINAL } Categoria;
 
 typedef enum { MAIS, MENOS, VEZES, DIVISAO, ATRIBUICAO, PONTO, 
-    ABRE_PARENTESIS, FECHA_PARENTESIS, VIRGULA } Operator;
+    ABRE_PARENTESIS, FECHA_PARENTESIS, VIRGULA, PONTO_VIRGULA } Operator;
 
 typedef enum { NOT, IGUAL, MAIOR, MENOR, MAIOR_IGUAL, MENOR_IGUAL } Logical;
 
@@ -182,9 +182,13 @@ bool close_file();
 
 void Error(string);
 
+void Query();
+
 bool Expre();
 
 void Values();
+
+void Where();
 
 void Set();
 

@@ -131,6 +131,14 @@ bool TableHeader::getTableMetaDado(fstream&f, TableMetaDado& tmd){
     return FileControl::getBlock(f, cchar(&tmd), this->metaTablePosition);
 }
 
+string TableHeader::getTableMeta(DataBase &db){
+    TableMetaDado tmd;
+    fstream f;
+    db.open(f);
+    this->getTableMetaDado(f, tmd);
+    return tmd.metaToString(f)[0];
+}
+
 int TableMetaDado::size(){
     return sizeof(*this);
 }
@@ -434,6 +442,10 @@ bool DataBase::open(fstream& file){
     return !file.bad();
 }
 
+bool DataBase::isOpen(){
+    return this->name != "";
+}
+
 void DataBase::close(){
     this->~DataBase();
 }
@@ -462,7 +474,7 @@ bool DataBase::insertTable(string tableName){
     if(!hth.getFromFile(file, this->Header.headTableHeader)) return FileControl::Error("HeadTableHeader::getFromFile", file);
     this->Header.numeroTabelas++;
     th.next = hth.firstTableHeader;
-    //Alocando os espaços no disco
+    //Alocando os espaï¿½os no disco
     hth.firstTableHeader = FileControl::discAlloc(file, th.size());
     if(!hth.firstTableHeader.isValid()) return FileControl::discAllocError(file);
     th.metaTablePosition = FileControl::discAlloc(file, tmd.size());
@@ -473,7 +485,7 @@ bool DataBase::insertTable(string tableName){
     if(!th.tablePosition.isValid()) return FileControl::discAllocError(file);
     t.headRegister = FileControl::discAlloc(file, hr.size());
     if(!t.headRegister.isValid()) return FileControl::discAllocError(file);
-    //gravando nos espaços alocados
+    //gravando nos espaï¿½os alocados
     if(!this->Header.setToFile(file, Segment(1, this->Header.size()))) return FileControl::Error("TableHeader::setToFile", file);
     if(!hth.setToFile(file, this->Header.headTableHeader)) return FileControl::Error("", file);
     if(!th.setToFile(file, hth.firstTableHeader)) return FileControl::Error("", file);
@@ -543,6 +555,14 @@ Segment DataBase::searchTable(HeadTableHeader& hth, TableHeader& th, TableMetaDa
     return Segment(0, 0);
 }
 
+TableHeader DataBase::getTableHeader(string table){
+    TableHeader th;
+    fstream file;
+    if(!this->open(file)) FileControl::Error("");
+    th.getFromFile(file, this->searchTable(table));
+    return th;
+}
+
 bool DataBase::insertColumn(string tableName, string columnName, char varType){
     HeadTableHeader hth;
     TableHeader th;
@@ -587,7 +607,13 @@ bool DataBase::insertRegister(MemRegister& mr){
     return !file.bad();
 }
 
-bool DataBase::updateRegister(string controle[4], string valor){
+bool DataBase::updateRegister(vector<string>  controle, string valor){
+    /*
+        0 ~ nome da tabela
+        1 ~ ID, Coluna ou * where clause
+        2 ~ caso 1, coluna tem q ser igual isso aqui
+        3 ~ coluna a ser atualizada
+    */
     HeadTableHeader hth;
     TableHeader th;
     TableMetaDado tmd;
@@ -605,12 +631,12 @@ bool DataBase::updateRegister(string controle[4], string valor){
     if(!t.getFromFile(file, th.tablePosition)) return FileControl::Error("", file);
     if(!hr.getFromFile(file, t.headRegister)) return FileControl::Error("", file);
     if(!r.getFromFile(file, hr.fistRegister)) return FileControl::Error("", file);
-    if(controle[1] == "ID"){
+    /*if(controle[1] == "ID"){
         //int id = stoi(controle[2]);
         for(int i = 1; i < stoi(controle[2]); i++) if(!r.getFromFile(file, r.next)) return FileControl::Error("", file);
         if(!r.updateVar(file, *this, v[0], coluna, valor)) return FileControl::Error("", file);
     }
-    else if(!controle[2].empty()){
+    else */if(!controle[2].empty()){
         unsigned int coluna2 = 0;
         for(coluna2 = 1; coluna2 < v.size(); coluna2++) if(controle[1] == v[coluna2]) break;
         if(coluna2 == v.size()) return FileControl::Error("Coluna nao foi encontrada", file);
@@ -635,7 +661,7 @@ bool DataBase::updateRegister(string controle[4], string valor){
     return !file.bad();
 }
 
-bool DataBase::deleteRegister(string controle[3]){
+bool DataBase::deleteRegister(vector<string> controle){
     /*
         *controle[0] ~ nome da tabela
         *controle[1] ~ ID ou coluna que tem que ser igual a controle[3] ou * deletar tudo
@@ -727,7 +753,7 @@ bool DataBase::deleteRegister(string controle[3]){
     return !file.bad();
 }
 
-vector<MemRegister> DataBase::getRegister(string controle[3], string& meta){
+vector<MemRegister> DataBase::getRegister(vector<string> controle){
     /*
         controle[0] ~ nome da tabela
         controle[1] ~ ID ou coluna que tem que ser igual a controle[3] ou * pegar tudo
@@ -748,7 +774,9 @@ vector<MemRegister> DataBase::getRegister(string controle[3], string& meta){
     if(!r.getFromFile(file, hr.fistRegister)) return FileControl::Error("", vector<MemRegister>(), file);
     if(controle[1] == "ID"){
         for(int i = 1; i < stoi(controle[2]); i++) if(!r.getFromFile(file, r.next)) return FileControl::Error("", vector<MemRegister>(), file);
-        mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
+        MemRegister mr = r.registerToMemRegister(file, v, controle[0]);
+        mr.meta = v[0];
+        mrv.push_back(mr);
     }
     else if(controle[2].empty()){
         unsigned int coluna;
@@ -770,7 +798,6 @@ vector<MemRegister> DataBase::getRegister(string controle[3], string& meta){
             mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
         }
     }
-    meta = v[0];
     file.close();
     return mrv;
 }

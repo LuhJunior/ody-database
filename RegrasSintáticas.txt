@@ -16,12 +16,14 @@ UPDATE <Identificador> SET <Identificador> = <CONST> {, <Identificador> = <CONST
 DELETE FROM <Identificador> WHERE <Expression>
 
 Expression :=
+    <CONST> ||
     <Identificador> [ == ] <CONST>
 
 
+TIPOS := int, float, char, string
 
 
--------------------- THE DREAM ------------------------------------------
+-------------------------- THE DREAM ------------------------------------------
 
 Expression := <Simple_Expre> [ <OperadorLogico> <Simple_Expre> ]
 

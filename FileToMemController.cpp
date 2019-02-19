@@ -76,7 +76,8 @@ bool MemRegister::insert(Node& n){
     return true;
 }
 
-void MemRegister::print(string meta){
+void MemRegister::print(){
+    string meta = this->meta;
     //cout("====== "<<nome<<" ======");
     for(unsigned int i=0; i<meta.size(); i++){
         if(meta[i] == INT) cout(vars[i].nome<<" : "<<(vars[i].info ? to_string(*cint(vars[i].info)) : ""));

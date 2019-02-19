@@ -1,1 +1,1 @@
-g++ main.cpp Interpreter.cpp FileController.cpp FileToMemController.cpp -std=c++17
+g++ main.cpp FileController.cpp FileToMemController.cpp Interpreter.cpp -std=c++17
