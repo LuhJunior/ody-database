@@ -2,6 +2,7 @@
 #include "Interpreter.hpp"
 
 ifstream Entrada;
+//FILE *Entrada;
 Token tn, tna;
 int linha = 1, coluna = 1;
 
@@ -12,12 +13,12 @@ vector<string> Reserved_Words = { "ADD", "ALTER", "COLUMN", "CREATE", "DATABASE"
     "INSERT", "INTO", "ON", "SELECT", "SET", "TABLE", "UPDATE", "USE", "VALUES", "WHERE" };
 
 bool prepare_file(string s){
-    Entrada.open(s, ifstream::binary);
+    Entrada.open(s, ifstream::in);
     return Entrada.is_open();
 }
 
 void Error(string e){
-    cerr<<"Ocorreu um erro na linha "<< linha << "e coluna " << coluna <<" : "<<e<<endl;
+    cerr<<"Ocorreu um erro na linha "<< linha << " e coluna " << coluna <<" : "<<e<<endl;
     exit(0);
 }
 
@@ -40,12 +41,10 @@ bool close_file(){
 }
 
 char get_next_char(){
-    coluna++;
     return Entrada.get();
 }
 
 void unget_char(char c){
-    coluna--;
     Entrada.unget();
 }
 
@@ -56,6 +55,7 @@ void get_first_token(){
 void get_next_token(){
     tn.free_token();
     tn = tna;
+    tn.print();
     if(!tna.is_final()) tna = get_token();
     else cout("Fim arquivo");
 }
@@ -80,6 +80,24 @@ void Token::print(){
                 cout<<"Reservado"<<endl;
                 cout<<"Valor: "<< Reserved_Words[*cchar(this->valor)]<<endl;
                 break;
+            case TYPE:
+                cout<<"Tipo"<<endl;
+                cout<<"Valor: ";
+                switch(*cchar(this->valor)) {
+                    case INT:
+                        cout<<"int"<<endl;
+                        break;
+                    case FLOAT:
+                        cout<<"float"<<endl;
+                        break;
+                    case CHAR:
+                        cout<<"char"<<endl;
+                        break;
+                    case STRING:
+                        cout<<"string"<<endl;
+                        break;
+                }
+                break;
             case CINT:
                 cout<<"Integer"<<endl;
                 cout<<"Valor: "<< *cint(this->valor)<<endl;
@@ -94,7 +112,7 @@ void Token::print(){
                 break;
             case CSTRING:
                 cout<<"String"<<endl;
-                cout<<"Valor: "<< cstring(this->valor)<<endl;
+                cout<<"Valor: "<< *cstring(this->valor)<<endl;
                 break;
             case OPERATOR:
                 cout<<"Operator"<<endl;
@@ -116,6 +134,13 @@ void Token::print(){
                     break;
                     case PONTO:
                         cout<<"Valor: "<< "."<<endl;
+                        break;
+                    case ABRE_PARENTESIS:
+                        cout<<"Valor: "<< "("<<endl;
+                        break;
+                    case FECHA_PARENTESIS:
+                        cout<<"Valor: "<< ")"<<endl;
+                        break;
                     break;
                 }
                 break;
@@ -279,8 +304,8 @@ void Query(){
                 cout(tn.identifier());
                 if(!tn.identifier()) Error("Esperava-se um identificador depois do TABLE");
                 identificadores.push_back(tn.get_string());
-                get_next_token();
                 if(tna.oper() == ABRE_PARENTESIS){
+                    get_next_token();
                     get_next_token();
                     if(!tn.type()) Error("Esperava-se um Type depois do \' ( \'");
                     identificadores.push_back(tn.get_string());
@@ -297,6 +322,7 @@ void Query(){
                         identificadores.push_back(tn.get_string());
                     }
                 }
+                get_next_token();
                 if(!database.isOpen()) Error("Nenhum banco selecionado");
                 if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
                 if(database.insertTable(identificadores[0])) cout("Tabela Adicionada");
@@ -309,34 +335,35 @@ void Query(){
             if(!tn.identifier()) Error("Esperava-se um identificador depois de TABLE");
             identificadores.push_back(tn.get_string());
             get_next_token();
-            if(tn.reserved() != ADD) 
+            if(tn.reserved() != ADD) Error("Esperava-se um ADD depois do identificador");
             get_next_token();
-            if(tn.reserved() != COLUMN){
+            if(tn.reserved() == COLUMN){
                 get_next_token();
-                if(tn.reserved() != ABRE_PARENTESIS) Error("Esperava-se um \"(\" depois do COLUMN");
+                if(tn.oper() != ABRE_PARENTESIS) Error("Esperava-se um \"(\" depois do COLUMN");
                 get_next_token();
                 if(!tn.type()) Error("Esperava-se um tipo depois do \"(\"");
-                identificadores.push_back("" + tn.get_char());
+                identificadores.push_back(string(1, tn.get_char()));
                 get_next_token();
                 if(!tn.identifier()) Error("Esperava-se um Identificador depois do tipo");
                 identificadores.push_back(tn.get_string());
                 get_next_token();
-                if(tn.reserved() != FECHA_PARENTESIS) Error("Esperava-se um \")\" depois do identificador");
+                if(tn.oper() != FECHA_PARENTESIS) Error("Esperava-se um \")\" depois do identificador");
                 get_next_token();
                 if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
-
                 if (database.insertColumn(identificadores[0], identificadores[2], identificadores[1][0]))
                     cout("Coluna Criada!");
+                else Error("Erro ao tentar adicionar coluna");
             //} else if() {
 
             } else {
-                Error("");
+                Error("Comando nao implementado");
             }
             break;
         case SELECT:
             get_next_token();
-            if(!(tn.identifier())) Error("Esperava-se um identificador depois do comando SELECT");
-            identificadores.push_back(tn.get_string());
+            if(!(tn.identifier() || tn.oper() == VEZES)) Error("Esperava-se um identificador depois do comando SELECT");
+            if(tn.identifier()) identificadores.push_back(tn.get_string());
+            else identificadores.push_back("*");
             get_next_token();
             if(tn.reserved() != FROM) Error("Esperava-se o comando FROM depois do identificador");
             get_next_token();
@@ -346,7 +373,9 @@ void Query(){
             get_next_token();
             if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
             {
-                auto mrs = database.getRegister(identificadores);
+                auto mrs = database.getRegister(vector<string>(
+                    {identificadores[1], identificadores[0]})
+                );
                 for(auto mr : mrs) mr.print();
             }
             break;
@@ -363,8 +392,11 @@ void Query(){
             if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
             {
                 string meta = database.getTableHeader(identificadores[0]).getTableMeta(database);
-                auto mr = MemRegister(identificadores, meta);
-                database.insertRegister(mr);
+                string tableName = identificadores[0];
+                identificadores.erase(identificadores.begin());
+                auto mr = MemRegister(tableName, identificadores, meta);
+                if(database.insertRegister(mr)) cout("Registro inserido com sucesso!");
+                else cout("Houve um problema ao tentar inserir o registro");
             }
             break;
         case UPDATE:
@@ -419,11 +451,11 @@ void Query(){
 void Execute(){
     prepare_file("queries.txt");
     get_first_token();
-    while(!tn.is_final()){
+    /* while(!tn.is_final()){
         get_next_token();
         tn.print();
-    }
-    //while(!tn.is_final()) Query();
+    } */
+    while(!tn.is_final()) Query();
 }
 
 Token get_token(){
@@ -471,18 +503,23 @@ Token get_token(){
                     buffer += c;
                 } else if (c == ' '){
                     //coluna++;
-                } else if (c == '\n' || c == '\r'){
+                } else if (c == '\n'){
                     coluna = 1;
                     linha++;
                 } else if (c == '\t'){
                     coluna+=3;
+                } else if(c == '(') {
+                    valor = ABRE_PARENTESIS;
+                    return Token(OPERATOR, &valor);
+                } else if(c == ')') {
+                    valor = FECHA_PARENTESIS;
+                    return Token(OPERATOR, &valor);
                 } else if(c == ';') {
                     valor = PONTO_VIRGULA;
                     return Token(OPERATOR, &valor);
                 } else if(c == EOF) {
                     return Token(FINAL, nullptr);
                 } else {
-                    cout<<int(c)<<endl;
                     estado = -1;
                 }
                 break;

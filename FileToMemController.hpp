@@ -51,7 +51,8 @@ private:
 class MemRegister{
 public:
     MemRegister(string s = ""): nome(s){}
-    MemRegister(vector<string> v, string meta){
+    MemRegister(string nome, vector<string> v, string meta){
+        this->nome = nome;
         for(int i=0; i<meta.size(); i++){
             void *ax = nullptr;
             switch (meta[i])

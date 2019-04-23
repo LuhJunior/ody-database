@@ -534,9 +534,6 @@ Segment DataBase::searchTable(HeadTableHeader& hth, TableHeader& th, TableMetaDa
     if(!tmd.getFromFile(file, th.metaTablePosition)) return FileControl::Error("", Segment(0, 0), file);
     string ax;
     if(!tmd.getNomeFromFile(file, ax)) return FileControl::Error("", Segment(0, 0), file);
-    cout(ax);
-    cout(tmd.tipo.getLimit());
-    cout(tmd.varNames.getBase());
     if(ax == tableName){
         file.close();
         return hth.firstTableHeader;
@@ -591,18 +588,18 @@ bool DataBase::insertRegister(MemRegister& mr){
     Register r;
     Segment s;
     fstream file;
-    if(!this->searchTable(hth, th, tmd, mr.nome).isValid()) return FileControl::Error("A tabela nao foi encontrada");
     if(!this->open(file)) return FileControl::Error("DataBase::open", false, file);
+    if(!this->searchTable(hth, th, tmd, mr.nome).isValid()) return FileControl::Error("A tabela nao foi encontrada");
     vector<string> v = tmd.metaToString(file);
     if(v.empty()) return FileControl::Error("TableMetaDado::metaToString", file);
-    if(!t.getFromFile(file, th.tablePosition)) return FileControl::Error("", file);
-    if(!hr.getFromFile(file, t.headRegister)) return FileControl::Error("", file);
+    if(!t.getFromFile(file, th.tablePosition)) return FileControl::Error("Table::getFromFile", file);
+    if(!hr.getFromFile(file, t.headRegister)) return FileControl::Error("HeadRegister::getFromFile", file);
     r.next = hr.fistRegister;
     hr.fistRegister = FileControl::discAlloc(file, r.size());
     if(!hr.fistRegister.isValid()) return FileControl::discAllocError(file);
-    if(!r.setMemRegisterToFile(file, v, mr)) return FileControl::Error("", file);
-    if(!r.setToFile(file, hr.fistRegister)) return FileControl::Error("", file);
-    if(!hr.setToFile(file, t.headRegister)) return FileControl::Error("", file);
+    if(!r.setMemRegisterToFile(file, v, mr)) return FileControl::Error("Register::setMemRegisterToFile", file);
+    if(!r.setToFile(file, hr.fistRegister)) return FileControl::Error("Register::setToFile", file);
+    if(!hr.setToFile(file, t.headRegister)) return FileControl::Error("HeadRegister::setToFile", file);
     file.close();
     return !file.bad();
 }
@@ -756,7 +753,7 @@ bool DataBase::deleteRegister(vector<string> controle){
 vector<MemRegister> DataBase::getRegister(vector<string> controle){
     /*
         controle[0] ~ nome da tabela
-        controle[1] ~ ID ou coluna que tem que ser igual a controle[3] ou * pegar tudo
+        controle[1] ~ ID ou coluna que tem que ser igual a controle[2] ou * pegar tudo
     */
     HeadTableHeader hth;
     TableHeader th;
@@ -794,6 +791,7 @@ vector<MemRegister> DataBase::getRegister(vector<string> controle){
     else if(controle[1] == "*"){
         mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
         for(int i = 1; i < th.numeroRegistros; i++){
+            cout<<"Minha pica rapaz"<<endl;
             if(!r.getFromFile(file, r.next)) return FileControl::Error("", vector<MemRegister>(), file);
             mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
         }

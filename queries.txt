@@ -3,4 +3,4 @@ USE mydatabase;
 CREATE TABLE Users;
 ALTER TABLE Users ADD COLUMN (string Nome);
 INSERT INTO Users VALUES("Testando");
-SELECT Nome FROM Users;
+SELECT * FROM Users;

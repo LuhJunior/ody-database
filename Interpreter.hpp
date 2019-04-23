@@ -36,6 +36,10 @@ public:
                 this->valor = new char;
                 *cchar(this->valor) = *cchar(valor);
                 break;
+            case TYPE:
+                this->valor = new char;
+                *cchar(this->valor) = *cchar(valor);
+                break;
             case CINT:
                 this->valor = new int;
                 *cint(this->valor) = stoi(*cstring(valor));
