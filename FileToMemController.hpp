@@ -51,6 +51,7 @@ private:
 class MemRegister{
 public:
     MemRegister(string s = ""): nome(s){}
+    MemRegister(string s, string meta): nome(s), meta(meta){}
     MemRegister(string nome, vector<string> v, string meta){
         this->nome = nome;
         for(int i=0; i<meta.size(); i++){

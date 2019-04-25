@@ -221,7 +221,7 @@ vector<string> TableMetaDado::metaToString(fstream& f){
     Data d;
     if(this->varNames.isValid()) if(!d.getFromFile(f, this->varNames)) return FileControl::Error("Data::getFromFile", vector<string>());
     if(!d.getDataFromFile(f, &v[1])) return FileControl::Error("Data::getDataFromFile", vector<string>());
-    for(unsigned int i=2; i <= this->tipo.getLimit()-1; i++){
+    for(unsigned int i=2; i <= this->tipo.getLimit(); i++){
         if(!d.toNext(f)) return FileControl::Error("Data::toNext", vector<string>(), f);
         if(!d.getDataFromFile(f, &v[i])) return FileControl::Error("Data::getDataFromFile", vector<string>(), f);
     }
@@ -354,7 +354,7 @@ bool Register::freeRegisterSeg(fstream& f, DataBase& db, Segment pos){
 MemRegister Register::registerToMemRegister(fstream& f, vector<string> meta, string name){
     Data d;
     Node n;
-    MemRegister mr(name);
+    MemRegister mr(name, meta[0]);
     if(!d.getFromFile(f, data)) return FileControl::Error("", MemRegister());
     n.nome = meta[1];
     if(!n.atribuir(f, d, meta[0][0])){
@@ -589,7 +589,8 @@ bool DataBase::insertRegister(MemRegister& mr){
     Segment s;
     fstream file;
     if(!this->open(file)) return FileControl::Error("DataBase::open", false, file);
-    if(!this->searchTable(hth, th, tmd, mr.nome).isValid()) return FileControl::Error("A tabela nao foi encontrada");
+    s = this->searchTable(hth, th, tmd, mr.nome);
+    if(!s.isValid()) return FileControl::Error("A tabela nao foi encontrada");
     vector<string> v = tmd.metaToString(file);
     if(v.empty()) return FileControl::Error("TableMetaDado::metaToString", file);
     if(!t.getFromFile(file, th.tablePosition)) return FileControl::Error("Table::getFromFile", file);
@@ -600,6 +601,8 @@ bool DataBase::insertRegister(MemRegister& mr){
     if(!r.setMemRegisterToFile(file, v, mr)) return FileControl::Error("Register::setMemRegisterToFile", file);
     if(!r.setToFile(file, hr.fistRegister)) return FileControl::Error("Register::setToFile", file);
     if(!hr.setToFile(file, t.headRegister)) return FileControl::Error("HeadRegister::setToFile", file);
+    th.numeroRegistros++;
+    if(!th.setToFile(file, s));
     file.close();
     return !file.bad();
 }
@@ -772,7 +775,6 @@ vector<MemRegister> DataBase::getRegister(vector<string> controle){
     if(controle[1] == "ID"){
         for(int i = 1; i < stoi(controle[2]); i++) if(!r.getFromFile(file, r.next)) return FileControl::Error("", vector<MemRegister>(), file);
         MemRegister mr = r.registerToMemRegister(file, v, controle[0]);
-        mr.meta = v[0];
         mrv.push_back(mr);
     }
     else if(controle[2].empty()){
@@ -791,7 +793,6 @@ vector<MemRegister> DataBase::getRegister(vector<string> controle){
     else if(controle[1] == "*"){
         mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
         for(int i = 1; i < th.numeroRegistros; i++){
-            cout<<"Minha pica rapaz"<<endl;
             if(!r.getFromFile(file, r.next)) return FileControl::Error("", vector<MemRegister>(), file);
             mrv.push_back(r.registerToMemRegister(file, v, controle[0]));
         }

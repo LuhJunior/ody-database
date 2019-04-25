@@ -55,9 +55,9 @@ void get_first_token(){
 void get_next_token(){
     tn.free_token();
     tn = tna;
-    tn.print();
+    //tn.print();
     if(!tna.is_final()) tna = get_token();
-    else cout("Fim arquivo");
+    //else cout("Fim arquivo");
 }
 
 bool Token::is_final(){
@@ -65,7 +65,7 @@ bool Token::is_final(){
 }
 
 void Token::free_token(){
-    free(this->valor);
+    if(this->valor) free(this->valor);
 }
 
 void Token::print(){
@@ -215,7 +215,8 @@ string Token::get_string(){
     if(this->cat == CINT) return to_string(this->get_int());
     //TOF
     else if (this->cat == CFLOAT) return to_string(this->get_float());
-    else if (this->cat == CCHAR) return string("" + this->get_char());
+    else if (this->cat == CCHAR) return string(1, this->get_char());
+    else if (this->cat == TYPE) return string(1, this->get_char());
     return *cstring(this->valor);
 }
 
@@ -300,14 +301,12 @@ void Query(){
                 else Error("Houve um Error na criacao do Banco!");
             } else if(tn.reserved() == TABLE){
                 get_next_token();
-                tn.print();
-                cout(tn.identifier());
                 if(!tn.identifier()) Error("Esperava-se um identificador depois do TABLE");
                 identificadores.push_back(tn.get_string());
                 if(tna.oper() == ABRE_PARENTESIS){
                     get_next_token();
                     get_next_token();
-                    if(!tn.type()) Error("Esperava-se um Type depois do \' ( \'");
+                    if(tn.type() == -1) Error("Esperava-se um Type depois do \' ( \'");
                     identificadores.push_back(tn.get_string());
                     get_next_token();
                     if(!tn.identifier()) Error("Esperava-se um identificador depois do Type");
@@ -315,17 +314,24 @@ void Query(){
                     while(tna.oper() == VIRGULA){
                         get_next_token();
                         get_next_token();
-                        if(!tn.type()) Error("Esperava-se um Type depois da \' , \'");
+                        if(tn.type() == -1) Error("Esperava-se um Type depois da \' , \'");
                         identificadores.push_back(tn.get_string());
                         get_next_token();
                         if(!tn.identifier()) Error("Esperava-se um identificador depois do Type");
                         identificadores.push_back(tn.get_string());
                     }
+                    get_next_token();
+                    if(tn.oper() != FECHA_PARENTESIS) Error("Esperava-se um \")\" depois do identificador");
                 }
                 get_next_token();
-                if(!database.isOpen()) Error("Nenhum banco selecionado");
                 if(tn.oper() != PONTO_VIRGULA) Error("Ponto e virgula");
+
+                if(!database.isOpen()) Error("Nenhum banco selecionado");
                 if(database.insertTable(identificadores[0])) cout("Tabela Adicionada");
+                for(int i=1; i<identificadores.size(); i+=2) {
+                    if (!database.insertColumn(identificadores[0], identificadores[i+1], identificadores[i][0]))
+                        Error("Erro ao tentar adicionar coluna");
+                }
             } else Error("Esperava-se um identificador depois do comando CREATE");
             break;
         case ALTER:
@@ -376,7 +382,13 @@ void Query(){
                 auto mrs = database.getRegister(vector<string>(
                     {identificadores[1], identificadores[0]})
                 );
-                for(auto mr : mrs) mr.print();
+                cout("\n\n========= Tabela "<< identificadores[1]<<" =========\n\n");
+                cout(mrs.size()<<" registros encontrados");
+                cout("\n----------------------------------------------------------------\n");
+                for(auto mr : mrs) {
+                    mr.print();
+                    cout("\n----------------------------------------------------------------\n");
+                }
             }
             break;
         case INSERT:
@@ -451,11 +463,7 @@ void Query(){
 void Execute(){
     prepare_file("queries.txt");
     get_first_token();
-    /* while(!tn.is_final()){
-        get_next_token();
-        tn.print();
-    } */
-    while(!tn.is_final()) Query();
+    while(!tna.is_final()) Query();
 }
 
 Token get_token(){
@@ -516,6 +524,9 @@ Token get_token(){
                     return Token(OPERATOR, &valor);
                 } else if(c == ';') {
                     valor = PONTO_VIRGULA;
+                    return Token(OPERATOR, &valor);
+                } else if(c == ',') {
+                    valor = VIRGULA;
                     return Token(OPERATOR, &valor);
                 } else if(c == EOF) {
                     return Token(FINAL, nullptr);
@@ -640,6 +651,7 @@ Token get_token(){
                 if(c == '\n') estado = 0;
                 break;
             default:
+                cout("Caracter invalido: "<<c);
                 FileControl::Error("Ocorreu um erro na linha: " + to_string(linha) + " e coluna: " + to_string(coluna));
                 exit(0);
                 break;    
